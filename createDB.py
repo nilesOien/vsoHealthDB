@@ -3,7 +3,7 @@
 # Small script that sets up a simple sqlite database with a table in it.
 # CSV files can then be read into the database with the fileToDB.py script.
 
-from sqlalchemy import create_engine, UniqueConstraint, Column, String, Integer
+from sqlalchemy import create_engine, UniqueConstraint, Index, Column, String, Integer
 from sqlalchemy_utils import database_exists, create_database
 from sqlalchemy.orm import declarative_base
 
@@ -24,7 +24,9 @@ class reportTable(Base):
     Instrument = Column(String,  nullable=False, primary_key=True)
     Status     = Column(Integer, nullable=False, primary_key=True)
     __table_args__ = (UniqueConstraint('Timestring', 'Provider', 'Source',
-                      'Instrument', 'Status', name='unique_constraint'),)
+                      'Instrument', 'Status', name='unique_constraint'),
+                      Index('report_indx', 'Timestring', 'Provider', 'Source',
+                            'Instrument','Status'),)
 
 # Create the database.
 # Had to install sqlalchemy_utils to do this.
