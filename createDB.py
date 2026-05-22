@@ -8,7 +8,7 @@ from sqlalchemy_utils import database_exists, create_database
 from sqlalchemy.orm import declarative_base
 
 # Make a table, the column names of which line
-# up with what we have in the JSON. Table name is "reports".
+# up with what we have in the CSV files. Table name is "reports".
 # Unique constraint ensures no duplicate entries.
 # In this case, none of the entries can be NULL, so set nullable to False.
 
