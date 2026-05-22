@@ -85,6 +85,10 @@ if args.sources is not None :
     src_filters = [reportTable.Source == src for src in src_list]
     query=query.filter(or_(*src_filters))
 
+# Set the order in which the output is sorted.
+query=query.order_by(reportTable.Timestring, reportTable.Provider,
+                     reportTable.Source, reportTable.Instrument)
+
 # Get the results, convert to a list of dicts, and print.
 results = query.all()
 list_of_results = [result.to_dict() for result in results ]
