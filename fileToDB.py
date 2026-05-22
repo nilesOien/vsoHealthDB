@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 
+# Small script to ingest a CSV file into the database created by
+# the createDB.py script.
+
 import csv
 import argparse
 import pprint

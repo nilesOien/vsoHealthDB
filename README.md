@@ -11,7 +11,7 @@ can set up by making a python virtual environment like so :
 python3 -m venv $HOME/vsoHealthDB/pyEnv
 ```
 
-Assuming the system you are on uses python3 (if not just use "python"
+Assuming the system you are on uses python3 (if not, then just use "python"
 in the above command).
 
 Then enter the virtual environment by sourcing the activation file :
@@ -67,7 +67,7 @@ Subsequent attempts to read the same file will fail due to the
 unique constraint placed on the database table.
 
 Optionally, if sqlite3 is installed, we can see how many entries there are in
-the database, and print the HAO ones :
+the database, and print the HAO ones as shown below :
 ```
 (pyEnv) noien@noienlaptop vsoHealthDB % sqlite3 report.db
 SQLite version 3.39.5 2022-10-14 20:58:05
@@ -83,16 +83,17 @@ sqlite> select Timestring, Source, Instrument,Status from reports where Provider
 sqlite> ^D
 ```
 
-The printDB python script can then read from the database and filter the results as shown below :
+The printDB python script can then read from the database and filter the results.
+Examples are shown below :
 ```
  ./printDB.py --minTime 20260521_134850 --maxTime 20260521_134852
  ./printDB.py --sources=STEREO_B,PUNCH
  ./printDB.py --instruments SECCHI,SWAVES
  ./printDB.py --providers=HAO,NSO
 ```
-Filters can be combined to operate in conjunction.
+Filters like the ones above can be combined to operate in conjunction.
 
-The printDB.py script has the --help option that comes with the arg parse module :
+The printDB.py script has the --help option that comes automatically with the arg parse module :
 ```
 ./printDB.py --help
 usage: printDB.py [-h] [--minTime MINTIME] [--maxTime MAXTIME]
@@ -116,4 +117,9 @@ optional arguments:
   --verbose, -v         Activate verbose messaging.
 ```
 
+Also, because ruff is installed, one can run
+```
+ruff check
+```
+in the virtual environment to check the python code.
 

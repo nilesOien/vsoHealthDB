@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 # Small script that sets up a simple sqlite database with a table in it.
+# CSV files can then be read into the database with the fileToDB.py script.
 
 from sqlalchemy import create_engine, UniqueConstraint, Column, String, Integer
 from sqlalchemy_utils import database_exists, create_database

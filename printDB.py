@@ -1,5 +1,9 @@
 #!/usr/bin/env python
 
+# Small script to print a selection from the database. The selection
+# can be made on a time range, and/or lists of instruments, providers and sources
+# as specified on the command line.
+
 import argparse
 import pprint
 
