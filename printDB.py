@@ -66,6 +66,10 @@ if args.minTime is not None :
 if args.maxTime is not None :
     query = query.filter(reportTable.Timestring <= args.maxTime)
 
+# The Instrument, Source and Provider filters all take a comma separated list of items,
+# split that into a list of items based on the comma, and then filter based on the or_()
+# function that is given the list as positional arguments using the unpacking
+# operator (the star).
 if args.instruments is not None :
     inst_list = args.instruments.split(',')
     inst_filters = [reportTable.Instrument == inst for inst in inst_list]
