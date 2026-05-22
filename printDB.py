@@ -24,6 +24,9 @@ parser.add_argument('--providers', '-p', default=None, type=str,
 parser.add_argument('--sources', '-s', default=None, type=str,
  help='Comma  separated list of sources')
 
+parser.add_argument('--minStatus', '-q', default=None, type=int,
+ help='Minimum integer status')
+
 parser.add_argument('--verbose', '-v', action='store_true', help='Activate verbose messaging.')
 
 args = parser.parse_args()
@@ -84,6 +87,9 @@ if args.sources is not None :
     src_list = args.sources.split(',')
     src_filters = [reportTable.Source == src for src in src_list]
     query=query.filter(or_(*src_filters))
+
+if args.minStatus is not None :
+    query = query.filter(reportTable.Status >= args.minStatus)
 
 # Set the order in which the output is sorted.
 query=query.order_by(reportTable.Timestring, reportTable.Provider,
