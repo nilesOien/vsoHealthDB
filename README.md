@@ -123,3 +123,23 @@ ruff check
 ```
 in the virtual environment to check the python code.
 
+# Example
+
+Below is a command to find the problematic responses (non-zero status) from
+the JSOC provider for the first five days in May, 2026.
+```
+./printDB.py --minTime 20260501_000000 --maxTime 20260505_235959 --providers JSOC --minStatus 1
+[{'Instrument': 'AIA',
+  'Provider': 'JSOC',
+  'Source': 'SDO',
+  'Status': 8,
+  'Timestring': '20260503_130016'},
+ {'Instrument': 'AIA',
+  'Provider': 'JSOC',
+  'Source': 'SDO',
+  'Status': 8,
+  'Timestring': '20260504_130044'}]
+2 results found.
+```
+Obviously this is reliant on the database having been loaded.
+
