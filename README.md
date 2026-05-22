@@ -129,6 +129,9 @@ Below is a command to find the problematic responses (non-zero status) from
 the JSOC provider for the first five days in May, 2026.
 ```
 ./printDB.py --minTime 20260501_000000 --maxTime 20260505_235959 --providers JSOC --minStatus 1
+```
+Which prints the following :
+```
 [{'Instrument': 'AIA',
   'Provider': 'JSOC',
   'Source': 'SDO',
