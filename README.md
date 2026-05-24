@@ -96,24 +96,24 @@ Filters like the ones above can be combined to operate in conjunction.
 The printDB.py script has the --help option that comes automatically with the arg parse module :
 ```
 ./printDB.py --help
-usage: printDB.py [-h] [--minTime MINTIME] [--maxTime MAXTIME]
-                  [--instruments INSTRUMENTS] [--providers PROVIDERS]
-                  [--sources SOURCES] [--verbose]
+usage: printDB.py [-h] [--minTime MINTIME] [--maxTime MAXTIME] [--instruments INSTRUMENTS] [--providers PROVIDERS] [--sources SOURCES]
+                  [--status STATUS] [--verbose]
 
 Print a selection from the database.
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
-  --minTime MINTIME, -b MINTIME
+  --minTime, -b MINTIME
                         Minimum time in YYYYMMDD_HHMMSS format
-  --maxTime MAXTIME, -e MAXTIME
+  --maxTime, -e MAXTIME
                         Maximum time in YYYYMMDD_HHMMSS format
-  --instruments INSTRUMENTS, -i INSTRUMENTS
+  --instruments, -i INSTRUMENTS
                         Comma separated list of instruments
-  --providers PROVIDERS, -p PROVIDERS
+  --providers, -p PROVIDERS
                         Comma separated list of providers
-  --sources SOURCES, -s SOURCES
+  --sources, -s SOURCES
                         Comma separated list of sources
+  --status, -q STATUS   Comma separated list of integer status codes
   --verbose, -v         Activate verbose messaging.
 ```
 
@@ -128,7 +128,7 @@ in the virtual environment to check the python code.
 Below is a command to find the problematic responses (non-zero status) from
 the JSOC provider for the first five days in May, 2026.
 ```
-./printDB.py --minTime 20260501_000000 --maxTime 20260505_235959 --providers JSOC --minStatus 1
+./printDB.py --minTime 20260501_000000 --maxTime 20260505_235959 --providers JSOC --status 2,3,4,5,6,7,8,9
 ```
 Which prints the following :
 ```

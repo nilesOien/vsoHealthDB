@@ -24,8 +24,8 @@ parser.add_argument('--providers', '-p', default=None, type=str,
 parser.add_argument('--sources', '-s', default=None, type=str,
  help='Comma  separated list of sources')
 
-parser.add_argument('--minStatus', '-q', default=None, type=int,
- help='Minimum integer status')
+parser.add_argument('--status', '-q', default=None, type=str,
+ help='Comma separated list of integer status codes')
 
 parser.add_argument('--verbose', '-v', action='store_true', help='Activate verbose messaging.')
 
@@ -72,24 +72,35 @@ if args.maxTime is not None :
 # The Instrument, Source and Provider filters all take a comma separated list of items,
 # split that into a list of items based on the comma, and then filter based on the or_()
 # function that is given the list as positional arguments using the unpacking
-# operator (the star).
+# operator (the star). Also, convert input strings to upper case.
 if args.instruments is not None :
-    inst_list = args.instruments.split(',')
+    inst_list = args.instruments.upper().split(',')
     inst_filters = [reportTable.Instrument == inst for inst in inst_list]
     query=query.filter(or_(*inst_filters))
 
 if args.providers is not None :
-    prov_list = args.providers.split(',')
+    prov_list = args.providers.upper().split(',')
     prov_filters = [reportTable.Provider == prov for prov in prov_list]
     query=query.filter(or_(*prov_filters))
 
 if args.sources is not None :
-    src_list = args.sources.split(',')
+    src_list = args.sources.upper().split(',')
     src_filters = [reportTable.Source == src for src in src_list]
     query=query.filter(or_(*src_filters))
 
-if args.minStatus is not None :
-    query = query.filter(reportTable.Status >= args.minStatus)
+# Status is a bit tricky because have to convert to integer.
+if args.status is not None :
+    sts_list = args.status.split(',')
+    i_sts_list = []
+    for sts in sts_list :
+        try :
+            int_st = int(sts)
+            i_sts_list.append(int_st)
+        except ValueError :
+            print(f"Status {sts} is not an integer")
+            quit()
+    sts_filters = [reportTable.Status == int_stat for int_stat in i_sts_list ]
+    query=query.filter(or_(*sts_filters))
 
 # Set the order in which the output is sorted.
 query=query.order_by(reportTable.Timestring, reportTable.Provider,
