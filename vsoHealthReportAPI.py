@@ -10,6 +10,7 @@ import os
 from sqlalchemy import create_engine, Column, String, Integer, or_
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy_utils import database_exists
 
 # Set up tags that appear in the documentation pages that FastAPI generates.
 tags_metadata = [
@@ -92,14 +93,16 @@ async def get_health_report(minTime:       str = Query(default=None),
         d={"statusMessage":"Failure to obtain connection string", "statusCode":-3, "results":[]}
         return d
 
+    # See if the database exists.
+    if not database_exists(dbURL):
+        d={"statusMessage":"Failure to connect to database", "statusCode":-4, "results":[]}
+        return d
+
     # Connect to the database.
     engine = create_engine(dbURL)
 
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     db = SessionLocal()
-    if db is None :
-        d={"statusMessage":"Failure to connect to database", "statusCode":-4, "results":[]}
-        return d
 
     # This query would get data from the two columns for the whole table.
     query = db.query(reportTable)
