@@ -146,3 +146,19 @@ Which prints the following :
 ```
 Obviously this is reliant on the database having been loaded.
 
+# API
+
+To run the API do :
+```
+pip install fastapi uvicorn python-dotenv email-validator pytest httpx
+```
+
+Then :
+```
+./startServer.sh
+```
+
+
+
+
+
