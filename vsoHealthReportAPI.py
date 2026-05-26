@@ -121,7 +121,7 @@ async def get_health_report(minTime:       str = Query(default=None),
     # then filter on that by passing the list of filters to the or_() function
     # as positional arguments using the star unpacking operator.
     if instrumentCSV is not None :
-        inst_list = instrumentCSV.upper().split(',')
+        inst_list = instrumentCSV.split(',') # Actually don't convert instrument to upper case.
         inst_filters = [reportTable.Instrument == inst for inst in inst_list]
         query=query.filter(or_(*inst_filters))
 
