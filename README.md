@@ -163,7 +163,6 @@ Then :
 Unit tests can be run on the API :
 
 ```
-```
 ./runUnitTests.sh
 =========================================== test session starts =========================================
 platform linux -- Python 3.14.5, pytest-9.0.3, pluggy-1.6.0 -- /home/noien/vsoHealthDB/pyEnv/bin/python
@@ -177,7 +176,6 @@ test_vsoHealthReportAPI.py::test_response_structure PASSED                      
 test_vsoHealthReportAPI.py::test_response_values PASSED                                            [100%]
 
 ============================================ 3 passed in 0.30s ==========================================
-```
 ```
 
 
