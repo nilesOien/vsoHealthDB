@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, Query
 from pydantic import BaseModel
 from typing import List
 from dotenv import load_dotenv
