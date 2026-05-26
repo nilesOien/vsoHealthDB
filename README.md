@@ -158,7 +158,26 @@ Then :
 ./startServer.sh
 ```
 
+# API Unit Tests
 
+Unit tests can be run on the API :
 
+```
+```
+./runUnitTests.sh
+=========================================== test session starts =========================================
+platform linux -- Python 3.14.5, pytest-9.0.3, pluggy-1.6.0 -- /home/noien/vsoHealthDB/pyEnv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/noien/vsoHealthDB
+plugins: anyio-4.13.0
+collected 3 items
+
+test_vsoHealthReportAPI.py::test_status PASSED                                                     [ 33%]
+test_vsoHealthReportAPI.py::test_response_structure PASSED                                         [ 66%]
+test_vsoHealthReportAPI.py::test_response_values PASSED                                            [100%]
+
+============================================ 3 passed in 0.30s ==========================================
+```
+```
 
 
