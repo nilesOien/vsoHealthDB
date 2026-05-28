@@ -3,3 +3,4 @@ pyEnv
 csvFiles
 .env
 __pycache__
+cronRunner.log

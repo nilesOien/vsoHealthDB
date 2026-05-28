@@ -102,4 +102,23 @@ def test_response_values() :
         assert item.get('Instrument') == 'AIA'
         assert item.get('Status') >= 8
 
+# Test the max time end point. JSON looks like :
+# {
+#  "statusMessage": "Success",
+#  "statusCode": 0,
+#  "maxTime": "20260522_130015"
+#  "minTime": "20220422_130015"
+# }
+def test_response_max_time():
+    response=client.get('/vso-health-report-max-time')
+    returnedObj = response.json()
+    expectedKeys = [ 'statusMessage', 'statusCode', 'maxTime', 'minTime' ]
+    for eKey in expectedKeys :
+        assert eKey in returnedObj
+    assert isinstance(returnedObj.get('statusMessage'), str)
+    assert isinstance(returnedObj.get('statusCode'), int)
+    assert isinstance(returnedObj.get('maxTime'), str)
+    assert isinstance(returnedObj.get('minTime'), str)
+
+    assert returnedObj.get('statusCode') == 0
 

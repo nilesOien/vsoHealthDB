@@ -1,0 +1,8 @@
+/*
+ * Cascading style sheet to set a nice font.
+ */
+
+body {
+ font: 14px Tahoma, Verdana, Arial, Helvetica, sans-serif;
+}
+
