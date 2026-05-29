@@ -1,18 +1,29 @@
 #!/usr/bin/env python
 
 from fastapi import FastAPI, Query
-from pydantic import BaseModel
-from typing import List
+from pydantic import BaseModel, RootModel
+from typing import List, Dict
 from dotenv import load_dotenv
 from sqlalchemy import func, select
 from fastapi.staticfiles import StaticFiles
 import os
+
+from collections import defaultdict
 
 # Database imports.
 from sqlalchemy import create_engine, Column, String, Integer, or_
 from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy_utils import database_exists
+
+# A recursive function that returns a dictionary that returns a dictionary...
+# With this in place, we can declare a variable and set it to be a
+# recursive_dict(), like so :
+# status_matrix = recursive_dict()
+# and then you can set the recursive nested dictionary keys with wild abandon.
+def recursive_dict():
+    return defaultdict(recursive_dict)
+
 
 # Set up tags that appear in the documentation pages that FastAPI generates.
 tags_metadata = [
@@ -31,6 +42,10 @@ tags_metadata = [
     {
         "name":"vso_health_report_max_time_service",
         "description":"Serves out the max time in the database."
+    },
+    {
+        "name":"get_health_report_data",
+        "description":"Where to go for health report data."
     }
    ]
 
@@ -46,6 +61,9 @@ healthReportApp = FastAPI(title="VSO Health Report Database API",
         version="1.0.0",
         openapi_tags=tags_metadata)
 
+
+# Class to represent database table. Comes with a handy to_dict() method
+# to convert the thing to a dictionary.
 Base = declarative_base()
 class reportTable(Base):
     __tablename__='reports'
@@ -54,36 +72,142 @@ class reportTable(Base):
     Source     = Column(String,  nullable=False, primary_key=True)
     Instrument = Column(String,  nullable=False, primary_key=True)
     Status     = Column(Integer, nullable=False, primary_key=True)
+    def to_dict(self) :
+        return {
+               "Timestring":self.Timestring,
+               "Provider":self.Provider,
+               "Source":self.Source,
+               "Instrument":self.Instrument,
+               "Status":self.Status
+              }
 
-# Define a class that is used in the general format of the JSON response.
-# This is a pydantic class (inherits from "BaseModel" class) that is
-# used for verification.
-class responseClass(BaseModel) :
-    # This triple quoted comment winds up on the documentation page
-    # for this schema.
-    """
-    Pydantic class that defines the format of what this endpoint delivers.
-    """
-    Timestring:      str
-    Provider:        str
-    Source:          str
-    Instrument:      str
-    Status:          int
 
-# Actually, embed that class in another class so that some meta data can be returned,
-# like a status code and status message.
-class embeddedResponseClass(BaseModel):
-    statusMessage:   str
-    statusCode:      int
-    results:         List[responseClass]
+# Small end point to get the min,max times in the database.
+class maxTimeClass(BaseModel):
+    statusMessage: str
+    statusCode:    int
+    maxTime:       str
+    minTime:       str
 
-@healthReportApp.get("/vso-health-report", response_model=embeddedResponseClass, tags=['vso_health_report_service'])
-async def get_health_report(minTime:       str = Query(default=None),
-                            maxTime:       str = Query(default=None),
-                            sourceCSV:     str = Query(default=None),
-                            instrumentCSV: str = Query(default=None),
-                            providerCSV:   str = Query(default=None),
-                            statusCSV:     str = Query(default=None)):
+@healthReportApp.get("/vso-health-report-max-time", response_model=maxTimeClass, tags=['vso_health_report_max_time_service'])
+async def get_health_report_max_time():
+
+    # Load the environment file .env and get the database URL.
+    load_dotenv()
+    dbURL = os.getenv("DATABASE_URL")
+    # Check that it went OK.
+    if dbURL is None :
+        d={"statusMessage":"Failure to obtain connection string", "statusCode":-3, "maxTime":"Error", "minTime":"Error"}
+        return d
+
+    # See if the database exists.
+    if not database_exists(dbURL):
+        d={"statusMessage":"Failure to connect to database", "statusCode":-4, "maxTime":"Error", "minTime":"Error"}
+        return d
+
+    # Connect to the database.
+    engine = create_engine(dbURL)
+
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    db = SessionLocal()
+
+    stmt = select(func.max(reportTable.Timestring))
+    max_value = db.scalar(stmt)
+
+    stmt = select(func.min(reportTable.Timestring))
+    min_value = db.scalar(stmt)
+
+    db.close()
+
+    d={"statusMessage":"Success", "statusCode":0, "maxTime":max_value, "minTime":min_value}
+    return d
+
+
+
+# Get health report data. It's passed back in a nested dictionary with dynamic keys.
+# It has some meta data, specifically a status message and code, and then the results.
+# A two day search with source=SOLIS specified thus returns this :
+# {
+#  "statusMessage": "Success",
+#  "statusCode": 0,
+#  "results": {
+#    "20260501_130051": {
+#      "NSO": {
+#        "SOLIS": {
+#          "ISS": 1,
+#          "vsm": 1
+#        }
+#      }
+#    },
+#    "20260502_130016": {
+#      "NSO": {
+#        "SOLIS": {
+#          "ISS": 0,
+#          "vsm": 1
+#        }
+#      }
+#    }
+#  },
+#   "psi_list": [
+#     {
+#       "Provider": "NSO",
+#       "Source": "SOLIS",
+#       "Instrument": "ISS"
+#     },
+#     {
+#       "Provider": "NSO",
+#       "Source": "SOLIS",
+#       "Instrument": "vsm"
+#    }
+#  ]
+# }
+# where the time strings are the times of the health report run,
+# NSO is the provider, SOLIS is the source, ISS and vsm are instruments, and
+# the integer values are the status codes for the health report for that day.
+
+# Instrument class represents something like this in the above example :
+# {
+#  "ISS": 0,
+#  "vsm": 1
+# }
+# With the integer  values being the status values from the health report run.
+class instrumentClass(RootModel):
+    root: dict[str, int]
+   
+# Source class represents something like "SOLIS": {...} in the above example : 
+class sourceClass(RootModel):
+    root: dict[str, instrumentClass]
+
+# Provider class represents something like "NSO": {...} in the above example :
+class providerClass(RootModel):
+    root: dict[str, sourceClass]
+
+# Time class represents something like "20260502_130016": {...} in the above example :
+class timeClass(RootModel):
+    root: dict[str, providerClass]
+
+# Class to represent a dict with Provider, Source, Instrument entries. We need to send this
+# to cope with the case in which instruments have been added/removed in the time range we're
+# looking at, and so not all provider/source/instrument items are present for all times.
+class psiClass(BaseModel):
+    Provider:   str
+    Source:     str
+    Instrument: str
+
+# Pydantic class to represent the entire returned data structure :
+class statusMatrixClass(BaseModel):
+    statusMessage: str
+    statusCode:    int
+    results:       timeClass
+    psi_list:      List[psiClass]
+
+@healthReportApp.get("/vso-health-report-data", response_model=statusMatrixClass, tags=['get_health_report_data'])
+async def get_health_report_data(minTime:       str = Query(default=None),
+                                 maxTime:       str = Query(default=None),
+                                 sourceCSV:     str = Query(default=None),
+                                 instrumentCSV: str = Query(default=None),
+                                 providerCSV:   str = Query(default=None),
+                                 statusCSV:     str = Query(default=None)):
     """
     Returns a list of dictionaries with VSO health report information.
     Times are in YYYYMMDD_HHMMSS format. Source, instrument and provider CSVs are comma
@@ -166,56 +290,33 @@ async def get_health_report(minTime:       str = Query(default=None),
     # Close the database, we're done with it.
     db.close()
 
+
     if db_results is None:
         d={"statusMessage":"Failure to obtain data", "statusCode":-2, "results":[]}
         return d
 
-    d={"statusMessage":"Success", "statusCode":0, "results":db_results}
+
+    # Re-organize the data a bit.
+    status_matrix=recursive_dict()
+    psi_list = []
+    for item in db_results :
+        item_dict=item.to_dict()
+        status_matrix[item_dict['Timestring']][item_dict['Provider']][item_dict['Source']][item_dict['Instrument']] = item_dict['Status']
+        # Be sure we have this provider/source/instrument in the psi_list, add it if not.
+        ml_item = { 'Provider':item_dict['Provider'], 'Source':item_dict['Source'], 'Instrument':item_dict['Instrument'] }
+        if not ml_item in psi_list :
+            psi_list.append(ml_item)
+
+    # Sort the list of provider/source/instrument into order.
+    psi_list = sorted(
+        psi_list, 
+        key=lambda x: (x['Provider'], x['Source'], x['Instrument'])
+    )
+
+    d={"statusMessage":"Success", "statusCode":0, "results":status_matrix, "psi_list":psi_list}
 
     return d
 
-
-
-# Small end point to get the max time in the database.
-
-class maxTimeClass(BaseModel):
-    statusMessage: str
-    statusCode:    int
-    maxTime:       str
-    minTime:       str
-
-@healthReportApp.get("/vso-health-report-max-time", response_model=maxTimeClass, tags=['vso_health_report_max_time_service'])
-async def get_health_report_max_time():
-
-    # Load the environment file .env and get the database URL.
-    load_dotenv()
-    dbURL = os.getenv("DATABASE_URL")
-    # Check that it went OK.
-    if dbURL is None :
-        d={"statusMessage":"Failure to obtain connection string", "statusCode":-3, "maxTime":"Error", "minTime":"Error"}
-        return d
-
-    # See if the database exists.
-    if not database_exists(dbURL):
-        d={"statusMessage":"Failure to connect to database", "statusCode":-4, "maxTime":"Error", "minTime":"Error"}
-        return d
-
-    # Connect to the database.
-    engine = create_engine(dbURL)
-
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    db = SessionLocal()
-
-    stmt = select(func.max(reportTable.Timestring))
-    max_value = db.scalar(stmt)
-
-    stmt = select(func.min(reportTable.Timestring))
-    min_value = db.scalar(stmt)
-
-    db.close()
-
-    d={"statusMessage":"Success", "statusCode":0, "maxTime":max_value, "minTime":min_value}
-    return d
 
 
 # Serve the web pages.
