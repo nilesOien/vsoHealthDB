@@ -36,12 +36,8 @@ tags_metadata = [
         },
     },
     {
-        "name":"vso_health_report_service",
-        "description":"An end point that serves out the VSO health report results."
-    },
-    {
-        "name":"vso_health_report_max_time_service",
-        "description":"Serves out the max time in the database."
+        "name":"vso_health_report_time_range_service",
+        "description":"Serves out the time range of data in the database."
     },
     {
         "name":"get_health_report_data",
@@ -83,14 +79,20 @@ class reportTable(Base):
 
 
 # Small end point to get the min,max times in the database.
-class maxTimeClass(BaseModel):
+class timeRangeClass(BaseModel):
     statusMessage: str
     statusCode:    int
     maxTime:       str
     minTime:       str
 
-@healthReportApp.get("/vso-health-report-max-time", response_model=maxTimeClass, tags=['vso_health_report_max_time_service'])
-async def get_health_report_max_time():
+@healthReportApp.get("/vso-health-report-time-range", response_model=timeRangeClass, tags=['vso_health_report_time_range_service'])
+async def get_health_report_time_range():
+    """
+    Small end point to return the maximum and minimum times in the database.
+    sqlite databases do not support time types, so times are strings
+    in YYYYMMDD_HHMMSS format (as parsed from the health report CSV file names
+    that are read into the sqlite database).
+    """
 
     # Load the environment file .env and get the database URL.
     load_dotenv()
@@ -124,7 +126,9 @@ async def get_health_report_max_time():
 
 
 
-# Get health report data. It's passed back in a nested dictionary with dynamic keys.
+
+
+# End point to get health report data. It's passed back in a nested dictionary with dynamic keys.
 # It has some meta data, specifically a status message and code, and then the results.
 # A two day search with source=SOLIS specified thus returns this :
 # {
@@ -209,11 +213,14 @@ async def get_health_report_data(minTime:       str = Query(default=None),
                                  providerCSV:   str = Query(default=None),
                                  statusCSV:     str = Query(default=None)):
     """
-    Returns a list of dictionaries with VSO health report information.
-    Times are in YYYYMMDD_HHMMSS format. Source, instrument and provider CSVs are comma
-    separated lists of items. These are converted to upper case internally.
-    Status are integer status codes. 0 => Pass, 1 => Pass on known request,
-    2 => Skipped, 8 => Fail on download, 9 => Fail no response.
+    Returns a JSON structure with VSO health report information from a database.
+    Times are in YYYYMMDD_HHMMSS format. Provider, source and instrument CSVs are comma
+    separated lists of Strings. Provider and source are are converted to upper case internally,
+    with white spaces stripped out. Instruments are left as-is.
+    Status is a comma separated list of integer status codes with the following meanings :
+    0 => Test passed,  1 => Test passed on known request,
+    2 => Test skipped, 8 => Test failed on data download, 9 => Test failed with no response.
+    Queries are limited to 50,000 responses just to avoid DoS attacks, accidents etc.
     """
     # Load the environment file .env and get the database URL.
     load_dotenv()
@@ -244,23 +251,24 @@ async def get_health_report_data(minTime:       str = Query(default=None),
     if maxTime is not None :
         query = query.filter(reportTable.Timestring <= maxTime)
 
-
     # For the comma separated lists, convert to upper case, split into a list
     # based on the comma, then make a list of filters based on the list of items,
     # then filter on that by passing the list of filters to the or_() function
     # as positional arguments using the star unpacking operator.
     if instrumentCSV is not None :
-        inst_list = instrumentCSV.split(',') # Actually don't convert instrument to upper case
+        inst_list = instrumentCSV.split(',') # Note : don't convert instrument to upper case - no .upper()
         inst_filters = [reportTable.Instrument == inst for inst in inst_list]
         query=query.filter(or_(*inst_filters))
 
     if providerCSV is not None :
-        prov_list = providerCSV.upper().split(',')
+        pCSV = "".join(providerCSV.split()) # Strip spaces
+        prov_list = pCSV.upper().split(',')
         prov_filters = [reportTable.Provider == prov for prov in prov_list]
         query=query.filter(or_(*prov_filters))
 
     if sourceCSV is not None :
-        src_list = sourceCSV.upper().split(',')
+        sCSV = "".join(sourceCSV.split())
+        src_list = sCSV.upper().split(',')
         src_filters = [reportTable.Source == src for src in src_list]
         query=query.filter(or_(*src_filters))
 
@@ -275,7 +283,7 @@ async def get_health_report_data(minTime:       str = Query(default=None),
                 i_sts_list.append(int_st)
             except ValueError :
                 db.close()
-                d={"statusMessage":f"Failure since non-integer status {sts} specified", "statusCode":-1, "results":[]}
+                d={"statusMessage":f"Failure since non-integer status {sts} specified", "statusCode":-1, "results":{}, "psi_list":[]}
                 return d
         sts_filters = [reportTable.Status == int_stat for int_stat in i_sts_list ]
         query=query.filter(or_(*sts_filters))
@@ -283,6 +291,9 @@ async def get_health_report_data(minTime:       str = Query(default=None),
     # Set the order in which the output is sorted.
     query=query.order_by(reportTable.Timestring, reportTable.Provider,
                      reportTable.Source, reportTable.Instrument)
+
+    # Set a (high) limit, just to avoid DoS attacks on the API.
+    query=query.limit(50000)
 
     # Do the query
     db_results = query.all()
@@ -292,9 +303,8 @@ async def get_health_report_data(minTime:       str = Query(default=None),
 
 
     if db_results is None:
-        d={"statusMessage":"Failure to obtain data", "statusCode":-2, "results":[]}
+        d={"statusMessage":"Failure to obtain data", "statusCode":-2, "results":{}, "psi_list":[]}
         return d
-
 
     # Re-organize the data a bit.
     status_matrix=recursive_dict()
@@ -316,6 +326,8 @@ async def get_health_report_data(minTime:       str = Query(default=None),
     d={"statusMessage":"Success", "statusCode":0, "results":status_matrix, "psi_list":psi_list}
 
     return d
+
+
 
 
 

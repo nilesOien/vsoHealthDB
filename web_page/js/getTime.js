@@ -2,7 +2,7 @@
 
 async function getTime(){
 
- let url='/vso-health-report-max-time';
+ let url='/vso-health-report-time-range';
  let response = await fetch(url);
 
  if (response.status != 200) {

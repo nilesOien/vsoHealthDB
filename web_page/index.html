@@ -4,18 +4,59 @@
 
 <title>HealthReport</title>
 
-<!-- Set a nice font. -->
+<!-- Set a nice font, etc. -->
 <link rel="stylesheet" href="css/font.css">
+<link rel="stylesheet" href="css/table.css">
 
 </head>
 
 <body>
 
 <script src="js/getTime.js"></script>
+<script src="js/populateTable.js"></script>
 
 <H2>VSO Health Report</h2>
 
+<P>
+<b>Start time</b> YYYYMMDD_HHMMSS format : <input type="text" id="minTimeBox" maxlength="15" value="20251101_000000">
+<b>End time</b> YYYYMMDD_HHMMSS format :   <input type="text" id="maxTimeBox" maxlength="15" value="20251121_235959"><br><br>
+
+The fields below are comma separated lists.
+Providers and sources are converted to upper case internally and have spaces stripped out, but
+instruments are left as-is.<br><br>
+
+<b>Providers</b> :   <input type="text" id="providerBox"    maxlength="20">
+<b>Sources</b> :     <input type="text" id="sourceBox"      maxlength="20">
+<b>Instruments</b> : <input type="text" id="instrumentsBox" maxlength="20"><br><br>
+
+<b>Status codes</b> (integers) :   <input type="text" id="statusBox" maxlength="20"><br><br>
+
+
+<button onclick="populateTable();">Populate</button> the table<br><br>
+<button onclick="clearTable();">Clear</button> the table
+</p>
+
+
+
 <P id="firstPara"></p>
+
+<P>
+Here are the <A href="/docs" target="_blank">swagger docs</a> for the underlying API end points,
+and the same for <A href="/redoc" target="_blank">redoc</a>.
+There is an upper limit of 50,000 status reports just to avoid overloading the system.
+</p>
+
+<P id="secondPara">
+ <table id="resultsTable">
+ </table>
+</p>
+
+<P id="thirdPara">
+<table id="keyTable">
+</table>
+</p>
+
+<P id="footerPara"></p>
 
 <script>
 getTime();
