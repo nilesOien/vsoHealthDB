@@ -25,7 +25,7 @@ client=TestClient(healthReportApp)
 #  "minTime": "20220422_130015"
 # }
 def test_response_max_time():
-    response=client.get('/vso-health-report-max-time')
+    response=client.get('/vso-health-report-time-range')
     returnedObj = response.json()
     expectedKeys = [ 'statusMessage', 'statusCode', 'maxTime', 'minTime' ]
     for eKey in expectedKeys :
