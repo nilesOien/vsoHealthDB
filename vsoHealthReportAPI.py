@@ -42,6 +42,10 @@ tags_metadata = [
     {
         "name":"get_health_report_data",
         "description":"Where to go for health report data."
+    },
+    {
+        "name":"get_health_report_most_recent",
+        "description":"Returns the most recent status code for the specified instrument"
     }
    ]
 
@@ -326,6 +330,116 @@ async def get_health_report_data(minTime:       str = Query(default=None),
     d={"statusMessage":"Success", "statusCode":0, "results":status_matrix, "psi_list":psi_list}
 
     return d
+
+
+# Get the most recent status value for a specified instrument.
+# Returns something like this :
+# {
+#  "statusMessage": "Success",
+#  "statusCode": 0,
+#  "result": {
+#    "Provider": "NSO",
+#    "Source": "GONG",
+#    "Instrument": "Learmonth",
+#    "Timestring": "20260522_130015",
+#    "Status": 0
+#  }
+# }
+# to cope with the case in which instruments have been added/removed in the time range we're
+# looking at, and so not all provider/source/instrument items are present for all times.
+class statusDeliveryClassInner(BaseModel):
+    Provider:   str
+    Source:     str
+    Instrument: str
+    Timestring: str
+    Status:     int
+
+# Pydantic class to represent the entire returned data structure :
+class statusDeliveryClassOuter(BaseModel):
+    statusMessage: str
+    statusCode:    int
+    result:        statusDeliveryClassInner
+
+@healthReportApp.get("/vso-health-report-most_recent_status", response_model=statusDeliveryClassOuter,
+                     tags=['get_health_report_most_recent'])
+async def get_health_report_most_recent(Provider:     str = Query(default='NSO'),
+                                        Source:       str = Query(default='GONG'),
+                                        Instrument:   str = Query(default='Learmonth')):
+    """
+    Returns a JSON structure with the most recent VSO health report status
+    for the specified instrument. Provider and Source are converted to upper case
+    internally, Instrument is left as-is.
+    Status has the following meaning :
+    0 => Test passed,  1 => Test passed on known request,
+    2 => Test skipped, 8 => Test failed on data download, 9 => Test failed with no response.
+    Default args are just present as a guide.
+    """
+
+    # Set up a bad result that we return if something goes wrong.
+    badResult = { "Provider":"NONE", "Source":"NONE", "Instrument":"NONE", "Timestring":"NONE", "Status":-1} 
+
+    # Check that we have what we need.
+    if Provider is None or Source is None or Instrument is None :
+        d={"statusMessage":"All of Provider, Source, Instrument must be specified", "statusCode":-2, "result":badResult}
+        return d
+
+    # Load the environment file .env and get the database URL.
+    load_dotenv()
+    dbURL = os.getenv("DATABASE_URL")
+    # Check that it went OK.
+    if dbURL is None :
+        d={"statusMessage":"Failure to obtain connection string", "statusCode":-3, "result":badResult}
+        return d
+
+    # See if the database exists.
+    if not database_exists(dbURL):
+        d={"statusMessage":"Failure to connect to database", "statusCode":-4, "result":badResult}
+        return d
+
+    # Connect to the database.
+    engine = create_engine(dbURL)
+
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    db = SessionLocal()
+
+    stmt = (
+      select(func.max(reportTable.Timestring))
+      .where(reportTable.Provider == Provider.upper(),
+             reportTable.Source == Source.upper(),
+             reportTable.Instrument == Instrument)
+    )
+
+    max_time = db.scalar(stmt)
+
+    if max_time is None :
+        db.close()
+        d={"statusMessage":"Instrument not found in database", "statusCode":-5, "result":badResult}
+        return d
+
+
+    stmt = (
+      select(reportTable.Status)
+      .where(reportTable.Provider == Provider.upper(),
+             reportTable.Source == Source.upper(),
+             reportTable.Instrument == Instrument,
+             reportTable.Timestring == max_time)
+    )
+
+    status_value = db.scalar(stmt)
+
+    db.close()
+
+    if status_value is None :
+        d={"statusMessage":f"Status not found in database at time {max_time}", "statusCode":-6, "result":badResult}
+        return d
+
+    goodResult = { "Provider":Provider, "Source":Source, "Instrument":Instrument, "Timestring":max_time, "Status":status_value} 
+
+    d={"statusMessage":"Success", "statusCode":0, "result":goodResult}
+
+    return d
+
+
 
 
 

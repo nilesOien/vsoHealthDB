@@ -113,3 +113,41 @@ def test_solis_query():
 
     return
 
+#
+# Test the most recent status end point. This returns something like :
+# {
+#  "statusMessage": "Success",
+#  "statusCode": 0,
+#  "result": {
+#    "Provider": "NSO",
+#    "Source": "GONG",
+#    "Instrument": "Learmonth",
+#    "Timestring": "20260522_130015",
+#    "Status": 0
+#  }
+# }
+def test_most_recent():
+    response=client.get('/vso-health-report-most_recent_status?Provider=NSO&Source=GONG&Instrument=Learmonth')
+    assert response.status_code == status.HTTP_200_OK
+
+    returnedObj = response.json()
+    # Check types, general structure.
+    assert isinstance(returnedObj.get('statusMessage'), str)
+    assert isinstance(returnedObj.get('statusCode'), int)
+    assert isinstance(returnedObj.get('result'), dict)
+
+    # Check the status code.
+    assert(returnedObj.get('statusCode') == 0)
+
+    expectedKeys=['Provider', 'Source', 'Instrument', 'Timestring', 'Status']
+    for eKey in expectedKeys :
+        assert(eKey in returnedObj.get('result'))
+
+    assert isinstance(returnedObj.get('result').get('Provider'), str)
+    assert isinstance(returnedObj.get('result').get('Source'), str)
+    assert isinstance(returnedObj.get('result').get('Instrument'), str)
+    assert isinstance(returnedObj.get('result').get('Timestring'), str)
+    assert isinstance(returnedObj.get('result').get('Status'), int)
+
+    return
+
