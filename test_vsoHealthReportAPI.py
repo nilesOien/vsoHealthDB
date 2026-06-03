@@ -11,20 +11,31 @@
 
 from fastapi.testclient import TestClient
 from fastapi import status
+from pathlib import Path
 
 # Import the app from 
 from .vsoHealthReportAPI import healthReportApp
 
 client=TestClient(healthReportApp)
 
-# Test the max time end point. JSON looks like :
+# Test that the database has been made and the .env file exists
+def test_setup():
+    env_file = Path(".env")
+    assert env_file.is_file()
+    db_file = Path("report.db")
+    assert db_file.is_file()
+
+    return
+
+
+# Test the time range end point. JSON looks like :
 # {
 #  "statusMessage": "Success",
 #  "statusCode": 0,
 #  "maxTime": "20260522_130015"
 #  "minTime": "20220422_130015"
 # }
-def test_response_max_time():
+def test_response_time_range():
     response=client.get('/vso-health-report-time-range')
     assert response.status_code == status.HTTP_200_OK
 
@@ -150,4 +161,44 @@ def test_most_recent():
     assert isinstance(returnedObj.get('result').get('Status'), int)
 
     return
+
+# Test the summary end point.
+def test_summary():
+    response=client.get('/vso-health-report-summary?minTime=20250501_000000&maxTime=20260501_235959&providerCSV=OMP')
+    assert response.status_code == status.HTTP_200_OK
+    returnedObj = response.json()
+    # Check the status code.
+    assert(returnedObj.get('statusCode') == 0)
+
+    # Check types, general structure.
+    assert isinstance(returnedObj.get('statusMessage'), str)
+    assert isinstance(returnedObj.get('statusCode'), int)
+    assert isinstance(returnedObj.get('results'), list)
+    assert isinstance(returnedObj.get('skipped'), list)
+
+    expectedKeys=['Provider', 'Source', 'Instrument']
+    for item in returnedObj.get('skipped') :
+        assert isinstance(item,dict)
+        for eKey in expectedKeys :
+            assert eKey in item
+
+    expectedKeys=['Provider', 'Source', 'Instrument', 'numBad', 'numGood', 'percentGood']
+    for item in returnedObj.get('results') :
+        assert isinstance(item,dict)
+        for eKey in expectedKeys :
+            assert eKey in item
+
+        assert isinstance(item.get('numBad'), int)
+        assert isinstance(item.get('numGood'), int)
+        assert isinstance(item.get('percentGood'), float)
+
+        assert item.get('numBad') >= 0
+        assert item.get('numGood') >= 0
+        assert item.get('percentGood') >= 0.0
+        assert item.get('percentGood') <= 100.0
+
+
+    return
+
+
 

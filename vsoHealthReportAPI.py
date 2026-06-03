@@ -2,7 +2,7 @@
 
 from fastapi import FastAPI, Query
 from pydantic import BaseModel, RootModel
-from typing import List, Dict
+from typing import List
 from dotenv import load_dotenv
 from sqlalchemy import func, select
 from fastapi.staticfiles import StaticFiles
@@ -46,6 +46,10 @@ tags_metadata = [
     {
         "name":"get_health_report_most_recent",
         "description":"Returns the most recent status code for the specified instrument"
+    },
+    {
+        "name":"get_health_report_summary",
+        "description":"Returns a summary of status codes."
     }
    ]
 
@@ -318,7 +322,7 @@ async def get_health_report_data(minTime:       str = Query(default=None),
         status_matrix[item_dict['Timestring']][item_dict['Provider']][item_dict['Source']][item_dict['Instrument']] = item_dict['Status']
         # Be sure we have this provider/source/instrument in the psi_list, add it if not.
         ml_item = { 'Provider':item_dict['Provider'], 'Source':item_dict['Source'], 'Instrument':item_dict['Instrument'] }
-        if not ml_item in psi_list :
+        if ml_item not in psi_list :
             psi_list.append(ml_item)
 
     # Sort the list of provider/source/instrument into order.
@@ -439,6 +443,228 @@ async def get_health_report_most_recent(Provider:     str = Query(default='NSO')
 
     return d
 
+
+
+
+
+
+
+# Summarize health report status codes.
+# Returned JSON is something like :
+# {
+#  "statusMessage": "Success",
+#  "statusCode": 0,
+#  "results": [
+#    {
+#      "Provider": "OMP",
+#      "Source": "OMP",
+#      "Instrument": "L2",
+#      "numBad": 36,
+#      "numGood": 149,
+#      "percentGood": 80.54054054054055
+#    },
+#    {
+#      "Provider": "OMP",
+#      "Source": "OMP",
+#      "Instrument": "C1",
+#      "numBad": 34,
+#      "numGood": 151,
+#      "percentGood": 81.62162162162163
+#    },
+#    {
+#      "Provider": "OMP",
+#      "Source": "OMP",
+#      "Instrument": "C2",
+#      "numBad": 33,
+#      "numGood": 152,
+#      "percentGood": 82.16216216216216
+#    },
+#    {
+#      "Provider": "OMP",
+#      "Source": "OMP",
+#      "Instrument": "L1",
+#      "numBad": 33,
+#      "numGood": 152,
+#      "percentGood": 82.16216216216216
+#    }
+#  ],
+#  "skipped": [
+#    {
+#      "Provider": "OMP",
+#      "Source": "OMP",
+#      "Instrument": "CLIMSO"
+#    }
+#  ]
+# }
+class summaryResultClass(BaseModel):
+    Provider:    str
+    Source:      str
+    Instrument:  str
+    numBad:      int
+    numGood:     int
+    percentGood: float
+
+class summarySkippedClass(BaseModel):
+    Provider:   str
+    Source:     str
+    Instrument: str
+
+# Pydantic class to represent the entire returned data structure :
+class summaryClass(BaseModel):
+    statusMessage: str
+    statusCode:    int
+    results:       List[summaryResultClass]
+    skipped:       List[summarySkippedClass]
+
+@healthReportApp.get("/vso-health-report-summary", response_model=summaryClass, tags=['get_health_report_summary'])
+async def get_health_report_summary(minTime:       str = Query(default=None),
+                                    maxTime:       str = Query(default=None),
+                                    sourceCSV:     str = Query(default=None),
+                                    instrumentCSV: str = Query(default=None),
+                                    providerCSV:   str = Query(default=None),
+                                    orderBy:       str = Query(default='Instrument')):
+    """
+    Returns a JSON structure with VSO health report summary information.
+    Times are in YYYYMMDD_HHMMSS format. Provider, source and instrument CSVs are comma
+    separated lists of strings. Provider and source are are converted to upper case internally,
+    with white spaces stripped out. Instruments are left as-is.
+    Status codes have the following meanings :
+    0 => Test passed,  1 => Test passed on known request,
+    2 => Test skipped, 8 => Test failed on data download, 9 => Test failed with no response.
+    Status codes 0 and 1 are takes as good, 8 and 9 are taken as bad, 2 is a non event.
+    orderBy is either Instrument (the default) or percentGood.
+    """
+
+    # Define which status codes we think are good, and bad.
+    goodStatusCodes=[0,1]
+    badStatusCodes=[8,9]
+
+    # Load the environment file .env and get the database URL.
+    load_dotenv()
+    dbURL = os.getenv("DATABASE_URL")
+    # Check that it went OK.
+    if dbURL is None :
+        d={"statusMessage":"Failure to obtain connection string", "statusCode":-3, "results":[], "skipped":[]}
+        return d
+
+    # See if the database exists.
+    if not database_exists(dbURL):
+        d={"statusMessage":"Failure to connect to database", "statusCode":-4, "results":[], "skipped":[]}
+        return d
+
+    # Connect to the database.
+    engine = create_engine(dbURL)
+
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    db = SessionLocal()
+
+    query = db.query(reportTable)
+
+    # If a minimum time was specified, filter on that.
+    if minTime is not None :
+        query = query.filter(reportTable.Timestring >= minTime)
+
+    # Ditto maximum time.
+    if maxTime is not None :
+        query = query.filter(reportTable.Timestring <= maxTime)
+
+    # For the comma separated lists, convert to upper case, split into a list
+    # based on the comma, then make a list of filters based on the list of items,
+    # then filter on that by passing the list of filters to the or_() function
+    # as positional arguments using the star unpacking operator.
+    if instrumentCSV is not None :
+        inst_list = instrumentCSV.split(',') # Note : don't convert instrument to upper case - no .upper()
+        inst_filters = [reportTable.Instrument == inst for inst in inst_list]
+        query=query.filter(or_(*inst_filters))
+
+    if providerCSV is not None :
+        pCSV = "".join(providerCSV.split()) # Strip spaces
+        prov_list = pCSV.upper().split(',')
+        prov_filters = [reportTable.Provider == prov for prov in prov_list]
+        query=query.filter(or_(*prov_filters))
+
+    if sourceCSV is not None :
+        sCSV = "".join(sourceCSV.split())
+        src_list = sCSV.upper().split(',')
+        src_filters = [reportTable.Source == src for src in src_list]
+        query=query.filter(or_(*src_filters))
+
+    # Set the order in which the output is sorted.
+    query=query.order_by(reportTable.Timestring, reportTable.Provider,
+                     reportTable.Source, reportTable.Instrument)
+
+
+    # Do the query
+    db_results = query.all()
+
+    # Close the database, we're done with it.
+    db.close()
+
+    if db_results is None:
+        d={"statusMessage":"Failure to obtain data", "statusCode":-2, "results":[], "skipped":[]}
+        return d
+
+    # Re-organize the data a lot.
+    results_matrix=recursive_dict()
+    psi_list = []
+    for item in db_results :
+        item_dict=item.to_dict()
+        # See if we have this provider/source/instrument in the psi_list.
+        # If not then add it, and initialize a nested dict.
+        ml_item = { 'Provider':item_dict['Provider'], 'Source':item_dict['Source'], 'Instrument':item_dict['Instrument'] }
+        if ml_item not in psi_list :
+            psi_list.append(ml_item)
+            results_matrix[item_dict['Provider']][item_dict['Source']][item_dict['Instrument']]['numGood']=0
+            results_matrix[item_dict['Provider']][item_dict['Source']][item_dict['Instrument']]['numBad']=0
+        status_value = item_dict['Status']
+        if status_value in goodStatusCodes :
+            val=results_matrix[item_dict['Provider']][item_dict['Source']][item_dict['Instrument']]['numGood']
+            results_matrix[item_dict['Provider']][item_dict['Source']][item_dict['Instrument']]['numGood']= val + 1
+
+        if status_value in badStatusCodes :
+            val=results_matrix[item_dict['Provider']][item_dict['Source']][item_dict['Instrument']]['numBad']
+            results_matrix[item_dict['Provider']][item_dict['Source']][item_dict['Instrument']]['numBad']= val + 1
+
+    # OK, the nested dict was a nice trick to get the good/bad counts.
+    # But we will now flip back into alist of normal dicts.
+    results=[]
+    skipped=[]
+    for pstring in results_matrix :
+        for srcstring in results_matrix[pstring] :
+            for istring in results_matrix[pstring][srcstring] :
+                nbad= results_matrix[pstring][srcstring][istring]['numBad']
+                ngood=results_matrix[pstring][srcstring][istring]['numGood']
+                if ngood == 0 and nbad == 0 : # It was skipped.
+                    skipDict = {"Provider":pstring, "Source":srcstring, "Instrument":istring}
+                    skipped.append(skipDict)
+                    continue
+                pgood=100.0*ngood/(nbad + ngood)
+                pgDict={"Provider":pstring, "Source":srcstring, "Instrument":istring, "numBad":nbad, "numGood":ngood, "percentGood":pgood}
+                results.append(pgDict)
+
+
+    if orderBy == 'Instrument':
+        # Sort the list in provider/source/instrument order.
+        results = sorted(
+         results, 
+         key=lambda x: (x['Provider'], x['Source'], x['Instrument'])
+        )
+
+    if orderBy == 'percentGood':
+        # Sort the list in order of percent good.
+        results = sorted(
+         results, 
+         key=lambda x: (x['percentGood'])
+        )
+
+    skipped = sorted (
+        skipped,
+        key=lambda x: (x['Provider'], x['Source'], x['Instrument'])
+    )
+
+    d={"statusMessage":"Success", "statusCode":0, "results":results, "skipped":skipped}
+
+    return d
 
 
 
