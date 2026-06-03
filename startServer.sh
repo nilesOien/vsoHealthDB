@@ -11,7 +11,7 @@ source pyEnv/bin/activate
 # uvicorn vsoHealthReportAPI:healthReportApp
 # means look in vsoHealthReportAPI.py and start the application healthReportApp in there
 #
-uvicorn vsoHealthReportAPI:healthReportApp --host vso05.nispdc.nso.edu --port 8001 --workers 1
+uvicorn vsoHealthReportAPI:healthReportApp --host vso05.nispdc.nso.edu --port 26996 --workers 1
 
 exit 0
 

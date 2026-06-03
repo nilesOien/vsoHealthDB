@@ -14,7 +14,7 @@ echo Starting
 
 # Enter the env
 source pyEnv/bin/activate
-uvicorn vsoHealthReportAPI:healthReportApp --host vso05.nispdc.nso.edu --port 8001 --workers 1 &> /dev/null &
+uvicorn vsoHealthReportAPI:healthReportApp --host vso05.nispdc.nso.edu --port 26996 --workers 1 &> /dev/null &
 
 exit 0
 
