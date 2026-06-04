@@ -11,6 +11,8 @@ function clearTable(){
 
 async function populateSummaryTable(){
 
+ clearTable();
+
  // Assemble the URL from the text boxes (maybe I should move to a POST method, I'm not sure)
  let url='/vso-health-report-summary';
  let sepChar='?';
