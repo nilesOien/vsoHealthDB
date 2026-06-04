@@ -7,18 +7,19 @@
 <!-- Set a nice font, etc. -->
 <link rel="stylesheet" href="css/font.css">
 <link rel="stylesheet" href="css/table.css">
+<link rel="stylesheet" href="css/centerPara.css">
 
 </head>
 
 <body>
 
 <script src="js/getTime.js"></script>
-<script src="js/populateTable.js"></script>
+<script src="js/populateSummaryTable.js"></script>
 
-<H2>VSO Health Report</h2>
+<H2>VSO Health Report Summaries</h2>
 
 <P>
-<b>Start time</b> YYYYMMDD_HHMMSS format : <input type="text" id="minTimeBox" maxlength="15" value="20251101_000000">
+<b>Start time</b> YYYYMMDD_HHMMSS format : <input type="text" id="minTimeBox" maxlength="15" value="20231121_000000">
 <b>End time</b> YYYYMMDD_HHMMSS format :   <input type="text" id="maxTimeBox" maxlength="15" value="20251121_235959"><br><br>
 
 The fields below are comma separated lists.
@@ -29,10 +30,11 @@ instruments are left as-is.<br><br>
 <b>Sources</b> :     <input type="text" id="sourceBox"      maxlength="20">
 <b>Instruments</b> : <input type="text" id="instrumentsBox" maxlength="20"><br><br>
 
-<b>Status codes</b> (integers) :   <input type="text" id="statusBox" maxlength="20"><br><br>
 
-
-<button onclick="populateTable();">Populate</button> the table<br><br>
+<button onclick="populateSummaryTable();">Populate</button> the table
+<input type="checkbox" id="orderByPG">
+<label for="orderByPG">Order by Percent Good</label>
+<br><br>
 <button onclick="clearTable();">Clear</button> the table
 </p>
 
@@ -41,25 +43,20 @@ instruments are left as-is.<br><br>
 <P id="firstPara"></p>
 
 <P>
-Here are the <A href="/docs" target="_blank">swagger docs</a> for the underlying API end points,
-and the same for <A href="/redoc" target="_blank">redoc</a>.
-There is an upper limit of 50,000 status reports just to avoid overloading the system.
+Back to the <A href="index.html" target="_blank">main</a> page.
 </p>
-
-<P>Link to the <a href="summary.html" target="_blank">summary</a> page
-and the <a href="mostRecent.html" target="_blank">most recent status</a> page.</P>
 
 <P id="secondPara">
  <table id="resultsTable">
  </table>
 </p>
 
+<P id="skippedPara" class="centerPara"></P>
+
 <P id="thirdPara">
-<table id="keyTable">
+<table id="skippedTable">
 </table>
 </p>
-
-<P id="footerPara"></p>
 
 <script>
 getTime();

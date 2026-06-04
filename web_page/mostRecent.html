@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+
+<title>HealthReport</title>
+
+<!-- Set a nice font, etc. -->
+<link rel="stylesheet" href="css/font.css">
+
+</head>
+
+<body>
+
+<script src="js/mostRecent.js"></script>
+
+<H2>VSO Health Report : Most Recent Status</h2>
+
+<P>
+The fields below are single items.
+Providers and sources are converted to upper case internally and have spaces stripped out, but
+the instrument is left as-is.<br><br>
+
+<b>Provider</b> :   <input type="text" id="providerBox"    maxlength="20" value="NSO">
+<b>Source</b> :     <input type="text" id="sourceBox"      maxlength="20" value="GONG">
+<b>Instrument</b> : <input type="text" id="instrumentBox"  maxlength="20" value="Learmonth"><br><br>
+
+The status codes have the following significance :
+<ul>
+ <li>0 = Test passed</li>
+ <li>1 = Test passed on known request</li>
+ <li>2 = Test skipped</li>
+ <li>8 = Test failed on data download</li>
+ <li>9 = Test failed with no response.</li>
+</ul>
+
+<button onclick="mostRecent();">Get</button> the most recent test result for the specified instrument.
+</p>
+
+<P>
+Back to the <A href="index.html" target="_blank">main</a> page.
+</p>
+
+<P id="resultPara"></p>
+
+</body>
+

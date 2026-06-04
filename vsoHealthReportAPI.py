@@ -364,11 +364,11 @@ class statusDeliveryClassOuter(BaseModel):
     statusCode:    int
     result:        statusDeliveryClassInner
 
-@healthReportApp.get("/vso-health-report-most_recent_status", response_model=statusDeliveryClassOuter,
+@healthReportApp.get("/vso-health-report-most-recent-status", response_model=statusDeliveryClassOuter,
                      tags=['get_health_report_most_recent'])
-async def get_health_report_most_recent(Provider:     str = Query(default='NSO'),
-                                        Source:       str = Query(default='GONG'),
-                                        Instrument:   str = Query(default='Learmonth')):
+async def get_health_report_most_recent(Provider:     str = Query(default=None),
+                                        Source:       str = Query(default=None),
+                                        Instrument:   str = Query(default=None)):
     """
     Returns a JSON structure with the most recent VSO health report status
     for the specified instrument. Provider and Source are converted to upper case
@@ -639,6 +639,7 @@ async def get_health_report_summary(minTime:       str = Query(default=None),
                     skipped.append(skipDict)
                     continue
                 pgood=100.0*ngood/(nbad + ngood)
+                pgood=round(pgood,2)
                 pgDict={"Provider":pstring, "Source":srcstring, "Instrument":istring, "numBad":nbad, "numGood":ngood, "percentGood":pgood}
                 results.append(pgDict)
 
