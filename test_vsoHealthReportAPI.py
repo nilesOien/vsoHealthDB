@@ -138,7 +138,7 @@ def test_solis_query():
 #  }
 # }
 def test_most_recent():
-    response=client.get('/vso-health-report-most_recent_status?Provider=NSO&Source=GONG&Instrument=Learmonth')
+    response=client.get('/vso-health-report-most-recent-status?Provider=NSO&Source=GONG&Instrument=Learmonth')
     assert response.status_code == status.HTTP_200_OK
 
     returnedObj = response.json()
