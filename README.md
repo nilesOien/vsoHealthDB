@@ -34,9 +34,6 @@ be served out on port 26996 from the host in question.
 If needed, the python virtual environment can be entered with 
 the command : *source pyEnv/bin/activate*
 
-```
-```
-
 # History (some of this is superseded)
 
 These scripts read into an sqlite database, but would need only minor
