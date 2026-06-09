@@ -12,14 +12,19 @@
 
 <body>
 
+<div style="position:absolute; top:10px; right:10px;">
+  <img src="vso_logo.png" alt="VSO Logo" style="max-height:120px;">
+</div>
+
+
 <script src="js/getTime.js"></script>
 <script src="js/populateTable.js"></script>
 
 <H2>VSO Health Report</h2>
 
 <P>
-<b>Start time</b> YYYYMMDD_HHMMSS format : <input type="text" id="minTimeBox" maxlength="15" value="20251101_000000">
-<b>End time</b> YYYYMMDD_HHMMSS format :   <input type="text" id="maxTimeBox" maxlength="15" value="20251121_235959"><br><br>
+<b>Start date</b> : <input type="date" id="minTimeBox" value="2025-11-01">
+<b>End date</b> : <input type="date" id="maxTimeBox" value="2025-11-21"><br><br>
 
 The fields below are comma separated lists.
 Providers and sources are converted to upper case internally and have spaces stripped out, but

@@ -1,4 +1,7 @@
 
+function formatMinDate(v){ return v ? v.replaceAll('-','') + '_000000' : ''; }
+function formatMaxDate(v){ return v ? v.replaceAll('-','') + '_235959' : ''; }
+
 // Small function to get a status description.
 // You pass in an integer status, you get a status description string back.
 function getStatusDescription(status){
@@ -65,43 +68,32 @@ async function populateTable(){
  clearTable();
 
  // Assemble the URL from the text boxes (maybe I should move to a POST method, I'm not sure)
- let url='/vso-health-report-data';
- let sepChar='?';
- if (document.getElementById('minTimeBox').value.length > 14){
-  url += sepChar + 'minTime=' + document.getElementById('minTimeBox').value;
-  sepChar='&';
+ let payload={}; let url='/vso-health-report-data';
+ if (document.getElementById('minTimeBox').value.length > 0){
+  payload.minTime=formatMinDate(document.getElementById('minTimeBox').value);
  }
 
- if (document.getElementById('maxTimeBox').value.length > 14){
-  url += sepChar + 'maxTime=' + document.getElementById('maxTimeBox').value;
-  sepChar='&';
+ if (document.getElementById('maxTimeBox').value.length > 0){
+  payload.maxTime=formatMaxDate(document.getElementById('maxTimeBox').value);
  }
 
  if (document.getElementById('providerBox').value.length > 1){
-  url += sepChar + 'providerCSV=' + document.getElementById('providerBox').value;
-  sepChar='&';
+  payload.providerCSV=document.getElementById('providerBox').value;
  }
 
  if (document.getElementById('sourceBox').value.length > 1){
-  url += sepChar + 'sourceCSV=' + document.getElementById('sourceBox').value;
-  sepChar='&';
+  payload.sourceCSV=document.getElementById('sourceBox').value;
  }
 
  if (document.getElementById('instrumentsBox').value.length > 1){
   url += sepChar + 'instrumentCSV=' + document.getElementById('instrumentsBox').value;
-  sepChar='&';
  }
 
  if (document.getElementById('statusBox').value.length > 0){
-  url += sepChar + 'statusCSV=' + document.getElementById('statusBox').value;
-  sepChar='&';
+  payload.statusCSV=document.getElementById('statusBox').value;
  }
 
-
- console.log(url)
-
-
- let response = await fetch(url);
+ let response = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
 
  if (response.status != 200) {
    alert(response.statusText);

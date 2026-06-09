@@ -3,7 +3,7 @@
 async function getTime(){
 
  let url='/vso-health-report-time-range';
- let response = await fetch(url);
+ let response = await fetch(url,{method:'POST'});
 
  if (response.status != 200) {
    alert(response.statusText);

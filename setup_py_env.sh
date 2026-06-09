@@ -24,8 +24,7 @@ then
 fi
 
 pip install --upgrade pip
-pip install sqlalchemy sqlalchemy-utils ruff
-pip install fastapi uvicorn python-dotenv email-validator pytest httpx2
+pip install -r requirements.txt
 
 exit 0
 

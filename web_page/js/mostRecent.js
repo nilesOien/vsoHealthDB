@@ -1,39 +1,9 @@
 
 async function mostRecent(){
 
- // Assemble the URL from the text boxes (maybe I should move to a POST method, I'm not sure)
- let url='/vso-health-report-most-recent-status';
- let sepChar='?';
+ let payload={Provider:document.getElementById('providerBox').value,Source:document.getElementById('sourceBox').value,Instrument:document.getElementById('instrumentBox').value};
 
-
- numBox=0;
- if (document.getElementById('providerBox').value.length > 1){
-  url += sepChar + 'Provider=' + document.getElementById('providerBox').value;
-  numBox++;
-  sepChar='&';
- }
-
- if (document.getElementById('sourceBox').value.length > 1){
-  url += sepChar + 'Source=' + document.getElementById('sourceBox').value;
-  sepChar='&';
-  numBox++;
- }
-
- if (document.getElementById('instrumentBox').value.length > 1){
-  url += sepChar + 'Instrument=' + document.getElementById('instrumentBox').value;
-  sepChar='&';
-  numBox++;
- }
-
- if (numBox < 3){
-    alert("All three of Provider, Source, Instrument must be specified");
-    return;
-  }
-
- console.log(url)
-
-
- let response = await fetch(url);
+ let response = await fetch('/vso-health-report-most-recent-status',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
 
  if (response.status != 200) {
    alert(response.statusText);

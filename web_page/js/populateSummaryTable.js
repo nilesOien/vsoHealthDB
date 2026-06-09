@@ -1,4 +1,7 @@
 
+function formatMinDate(v){ return v ? v.replaceAll('-','') + '_000000' : ''; }
+function formatMaxDate(v){ return v ? v.replaceAll('-','') + '_235959' : ''; }
+
 function clearTable(){
 
   document.getElementById('resultsTable').innerHTML = "";
@@ -14,42 +17,34 @@ async function populateSummaryTable(){
  clearTable();
 
  // Assemble the URL from the text boxes (maybe I should move to a POST method, I'm not sure)
- let url='/vso-health-report-summary';
- let sepChar='?';
- if (document.getElementById('minTimeBox').value.length > 14){
-  url += sepChar + 'minTime=' + document.getElementById('minTimeBox').value;
-  sepChar='&';
+ let payload={}; let url='/vso-health-report-summary';
+ if (document.getElementById('minTimeBox').value.length > 0){
+  payload.minTime=formatMinDate(document.getElementById('minTimeBox').value);
  }
 
- if (document.getElementById('maxTimeBox').value.length > 14){
-  url += sepChar + 'maxTime=' + document.getElementById('maxTimeBox').value;
-  sepChar='&';
+ if (document.getElementById('maxTimeBox').value.length > 0){
+  payload.maxTime=formatMaxDate(document.getElementById('maxTimeBox').value);
  }
 
  if (document.getElementById('providerBox').value.length > 1){
-  url += sepChar + 'providerCSV=' + document.getElementById('providerBox').value;
-  sepChar='&';
+  payload.providerCSV=document.getElementById('providerBox').value;
  }
 
  if (document.getElementById('sourceBox').value.length > 1){
-  url += sepChar + 'sourceCSV=' + document.getElementById('sourceBox').value;
-  sepChar='&';
+  payload.sourceCSV=document.getElementById('sourceBox').value;
  }
 
  if (document.getElementById('instrumentsBox').value.length > 1){
-  url += sepChar + 'instrumentCSV=' + document.getElementById('instrumentsBox').value;
-  sepChar='&';
+  // url += sepChar + 'instrumentCSV=' + document.getElementById('instrumentsBox').value;
+  payload.instrumentCSV=document.getElementById('instrumentsBox').value;
  }
 
  if (document.getElementById('orderByPG').checked){
-  url += sepChar + 'orderBy=percentGood';
-  sepChar='&';
+  // url += sepChar + 'orderBy=percentGood';
+  payload.orderBy='percentGood';
  }
 
- console.log(url)
-
-
- let response = await fetch(url);
+ let response = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
 
  if (response.status != 200) {
    alert(response.statusText);

@@ -17,6 +17,7 @@ final_exit="0"
 # Run unit tests.
 # They fail if they have non-zero status.
 echo Running unit tests...
+export PYTHONPATH="`pwd`"
 pytest -v
 status="$?"
 if [ "$status" -ne 0 ]

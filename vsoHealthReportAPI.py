@@ -1,20 +1,17 @@
-#!/usr/bin/env python
 
-from fastapi import FastAPI, Query
+from fastapi import FastAPI
 from pydantic import BaseModel, RootModel
 from typing import List
-from dotenv import load_dotenv
 from sqlalchemy import func, select
 from fastapi.staticfiles import StaticFiles
-import os
 
 from collections import defaultdict
 
 # Database imports.
-from sqlalchemy import create_engine, Column, String, Integer, or_
-from sqlalchemy.orm import declarative_base
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy_utils import database_exists
+from sqlalchemy import or_
+from db.database import get_session,get_db_url,database_ready
+from db.models import Report as reportTable
+
 
 # A recursive function that returns a dictionary that returns a dictionary...
 # With this in place, we can declare a variable and set it to be a
@@ -68,23 +65,6 @@ healthReportApp = FastAPI(title="VSO Health Report Database API",
 
 # Class to represent database table. Comes with a handy to_dict() method
 # to convert the thing to a dictionary.
-Base = declarative_base()
-class reportTable(Base):
-    __tablename__='reports'
-    Timestring = Column(String,  nullable=False, primary_key=True)
-    Provider   = Column(String,  nullable=False, primary_key=True)
-    Source     = Column(String,  nullable=False, primary_key=True)
-    Instrument = Column(String,  nullable=False, primary_key=True)
-    Status     = Column(Integer, nullable=False, primary_key=True)
-    def to_dict(self) :
-        return {
-               "Timestring":self.Timestring,
-               "Provider":self.Provider,
-               "Source":self.Source,
-               "Instrument":self.Instrument,
-               "Status":self.Status
-              }
-
 
 # Small end point to get the min,max times in the database.
 class timeRangeClass(BaseModel):
@@ -93,7 +73,7 @@ class timeRangeClass(BaseModel):
     maxTime:       str
     minTime:       str
 
-@healthReportApp.get("/vso-health-report-time-range", response_model=timeRangeClass, tags=['vso_health_report_time_range_service'])
+@healthReportApp.post("/vso-health-report-time-range", response_model=timeRangeClass, tags=['vso_health_report_time_range_service'])
 async def get_health_report_time_range():
     """
     Small end point to return the maximum and minimum times in the database.
@@ -103,23 +83,19 @@ async def get_health_report_time_range():
     """
 
     # Load the environment file .env and get the database URL.
-    load_dotenv()
-    dbURL = os.getenv("DATABASE_URL")
+    dbURL = get_db_url()
     # Check that it went OK.
     if dbURL is None :
         d={"statusMessage":"Failure to obtain connection string", "statusCode":-3, "maxTime":"Error", "minTime":"Error"}
         return d
 
     # See if the database exists.
-    if not database_exists(dbURL):
+    if not database_ready():
         d={"statusMessage":"Failure to connect to database", "statusCode":-4, "maxTime":"Error", "minTime":"Error"}
         return d
 
     # Connect to the database.
-    engine = create_engine(dbURL)
-
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    db = SessionLocal()
+    db = get_session()
 
     stmt = select(func.max(reportTable.Timestring))
     max_value = db.scalar(stmt)
@@ -213,13 +189,37 @@ class statusMatrixClass(BaseModel):
     results:       timeClass
     psi_list:      List[psiClass]
 
-@healthReportApp.get("/vso-health-report-data", response_model=statusMatrixClass, tags=['get_health_report_data'])
-async def get_health_report_data(minTime:       str = Query(default=None),
-                                 maxTime:       str = Query(default=None),
-                                 sourceCSV:     str = Query(default=None),
-                                 instrumentCSV: str = Query(default=None),
-                                 providerCSV:   str = Query(default=None),
-                                 statusCSV:     str = Query(default=None)):
+
+class HealthReportDataRequest(BaseModel):
+    minTime: str | None = None
+    maxTime: str | None = None
+    sourceCSV: str | None = None
+    instrumentCSV: str | None = None
+    providerCSV: str | None = None
+    statusCSV: str | None = None
+
+class MostRecentRequest(BaseModel):
+    Provider: str | None = None
+    Source: str | None = None
+    Instrument: str | None = None
+
+class SummaryRequest(BaseModel):
+    minTime: str | None = None
+    maxTime: str | None = None
+    sourceCSV: str | None = None
+    instrumentCSV: str | None = None
+    providerCSV: str | None = None
+    orderBy: str = 'Instrument'
+
+
+@healthReportApp.post("/vso-health-report-data", response_model=statusMatrixClass, tags=['get_health_report_data'])
+async def get_health_report_data(request: HealthReportDataRequest):
+    minTime=request.minTime
+    maxTime=request.maxTime
+    sourceCSV=request.sourceCSV
+    instrumentCSV=request.instrumentCSV
+    providerCSV=request.providerCSV
+    statusCSV=request.statusCSV
     """
     Returns a JSON structure with VSO health report information from a database.
     Times are in YYYYMMDD_HHMMSS format. Provider, source and instrument CSVs are comma
@@ -231,23 +231,19 @@ async def get_health_report_data(minTime:       str = Query(default=None),
     Queries are limited to 50,000 responses just to avoid DoS attacks, accidents etc.
     """
     # Load the environment file .env and get the database URL.
-    load_dotenv()
-    dbURL = os.getenv("DATABASE_URL")
+    dbURL = get_db_url()
     # Check that it went OK.
     if dbURL is None :
         d={"statusMessage":"Failure to obtain connection string", "statusCode":-3, "results":[]}
         return d
 
     # See if the database exists.
-    if not database_exists(dbURL):
+    if not database_ready():
         d={"statusMessage":"Failure to connect to database", "statusCode":-4, "results":[]}
         return d
 
     # Connect to the database.
-    engine = create_engine(dbURL)
-
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    db = SessionLocal()
+    db = get_session()
 
     query = db.query(reportTable)
 
@@ -364,11 +360,12 @@ class statusDeliveryClassOuter(BaseModel):
     statusCode:    int
     result:        statusDeliveryClassInner
 
-@healthReportApp.get("/vso-health-report-most-recent-status", response_model=statusDeliveryClassOuter,
+@healthReportApp.post("/vso-health-report-most-recent-status", response_model=statusDeliveryClassOuter,
                      tags=['get_health_report_most_recent'])
-async def get_health_report_most_recent(Provider:     str = Query(default=None),
-                                        Source:       str = Query(default=None),
-                                        Instrument:   str = Query(default=None)):
+async def get_health_report_most_recent(request: MostRecentRequest):
+    Provider=request.Provider
+    Source=request.Source
+    Instrument=request.Instrument
     """
     Returns a JSON structure with the most recent VSO health report status
     for the specified instrument. Provider and Source are converted to upper case
@@ -388,23 +385,19 @@ async def get_health_report_most_recent(Provider:     str = Query(default=None),
         return d
 
     # Load the environment file .env and get the database URL.
-    load_dotenv()
-    dbURL = os.getenv("DATABASE_URL")
+    dbURL = get_db_url()
     # Check that it went OK.
     if dbURL is None :
         d={"statusMessage":"Failure to obtain connection string", "statusCode":-3, "result":badResult}
         return d
 
     # See if the database exists.
-    if not database_exists(dbURL):
+    if not database_ready():
         d={"statusMessage":"Failure to connect to database", "statusCode":-4, "result":badResult}
         return d
 
     # Connect to the database.
-    engine = create_engine(dbURL)
-
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    db = SessionLocal()
+    db = get_session()
 
     stmt = (
       select(func.max(reportTable.Timestring))
@@ -516,13 +509,14 @@ class summaryClass(BaseModel):
     results:       List[summaryResultClass]
     skipped:       List[summarySkippedClass]
 
-@healthReportApp.get("/vso-health-report-summary", response_model=summaryClass, tags=['get_health_report_summary'])
-async def get_health_report_summary(minTime:       str = Query(default=None),
-                                    maxTime:       str = Query(default=None),
-                                    sourceCSV:     str = Query(default=None),
-                                    instrumentCSV: str = Query(default=None),
-                                    providerCSV:   str = Query(default=None),
-                                    orderBy:       str = Query(default='Instrument')):
+@healthReportApp.post("/vso-health-report-summary", response_model=summaryClass, tags=['get_health_report_summary'])
+async def get_health_report_summary(request: SummaryRequest):
+    minTime=request.minTime
+    maxTime=request.maxTime
+    sourceCSV=request.sourceCSV
+    instrumentCSV=request.instrumentCSV
+    providerCSV=request.providerCSV
+    orderBy=request.orderBy
     """
     Returns a JSON structure with VSO health report summary information.
     Times are in YYYYMMDD_HHMMSS format. Provider, source and instrument CSVs are comma
@@ -540,23 +534,19 @@ async def get_health_report_summary(minTime:       str = Query(default=None),
     badStatusCodes=[8,9]
 
     # Load the environment file .env and get the database URL.
-    load_dotenv()
-    dbURL = os.getenv("DATABASE_URL")
+    dbURL = get_db_url()
     # Check that it went OK.
     if dbURL is None :
         d={"statusMessage":"Failure to obtain connection string", "statusCode":-3, "results":[], "skipped":[]}
         return d
 
     # See if the database exists.
-    if not database_exists(dbURL):
+    if not database_ready():
         d={"statusMessage":"Failure to connect to database", "statusCode":-4, "results":[], "skipped":[]}
         return d
 
     # Connect to the database.
-    engine = create_engine(dbURL)
-
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    db = SessionLocal()
+    db = get_session()
 
     query = db.query(reportTable)
 

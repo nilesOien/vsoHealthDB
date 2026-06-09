@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 from fastapi import status
 from pathlib import Path
 
-# Import the app from 
+# Import the app
 from .vsoHealthReportAPI import healthReportApp
 
 client=TestClient(healthReportApp)
@@ -36,7 +36,7 @@ def test_setup():
 #  "minTime": "20220422_130015"
 # }
 def test_response_time_range():
-    response=client.get('/vso-health-report-time-range')
+    response=client.post('/vso-health-report-time-range')
     assert response.status_code == status.HTTP_200_OK
 
     returnedObj = response.json()
@@ -86,7 +86,7 @@ def test_response_time_range():
 # This test doesn't really get into the results field except to say that it's a nested dict,
 # four deep with ints at the end.
 def test_solis_query():
-    response=client.get('/vso-health-report-data?minTime=20260301_000000&maxTime=20260301_235959&sourceCSV=SOLIS')
+    response=client.post('/vso-health-report-data', json={'minTime':'20260301_000000','maxTime':'20260301_235959','sourceCSV':'SOLIS'})
     assert response.status_code == status.HTTP_200_OK
 
     returnedObj = response.json()
@@ -138,7 +138,7 @@ def test_solis_query():
 #  }
 # }
 def test_most_recent():
-    response=client.get('/vso-health-report-most-recent-status?Provider=NSO&Source=GONG&Instrument=Learmonth')
+    response=client.post('/vso-health-report-most-recent-status', json={'Provider':'NSO','Source':'SOLIS','Instrument':'ISS'})
     assert response.status_code == status.HTTP_200_OK
 
     returnedObj = response.json()
@@ -164,7 +164,7 @@ def test_most_recent():
 
 # Test the summary end point.
 def test_summary():
-    response=client.get('/vso-health-report-summary?minTime=20250501_000000&maxTime=20260501_235959&providerCSV=OMP')
+    response=client.post('/vso-health-report-summary', json={'minTime':'20250501_000000', 'maxTime':'20260501_235959', 'providerCSV':'OMP'})
     assert response.status_code == status.HTTP_200_OK
     returnedObj = response.json()
     # Check the status code.
