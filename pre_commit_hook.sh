@@ -18,7 +18,7 @@ final_exit="0"
 # They fail if they have non-zero status.
 echo Running unit tests...
 export PYTHONPATH="$HOME/vsoHealthDB"
-pytest -v
+uv run pytest -v
 status="$?"
 if [ "$status" -ne 0 ]
 then
@@ -29,7 +29,7 @@ fi
 # Run ruff code checks - similar
 echo
 echo Running code checks...
-ruff check
+uv run ruff check
 status="$?"
 if [ "$status" -ne 0 ]
 then

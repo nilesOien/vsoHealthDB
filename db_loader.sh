@@ -3,8 +3,6 @@
 # Bash script to drive creation of the sqlite database from CSV files.
 # Needs the path to the files as an argument.
 
-source pyEnv/bin/activate
-
 if [ "$#" -ne 1 ]
 then
  echo A directory with CSV files must be specified
@@ -21,7 +19,7 @@ fi
 
 if [ ! -f report.db ]
 then
- ./createDB.py
+ uv run ./createDB.py
 fi
 
 nf=0
@@ -33,7 +31,7 @@ do
   continue
  fi
 
- ./fileToDB.py --inFile "$file"
+ uv run ./fileToDB.py --inFile "$file"
  nf=`expr "$nf" + 1`
 
 done

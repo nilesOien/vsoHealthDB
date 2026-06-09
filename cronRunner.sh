@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd /home/noien/vsoHealthDB
+cd $HOME/vsoHealthDB
 
 num=`ps aux | grep "$USER" | grep uvicorn | grep -v grep | wc -l`
 
@@ -12,9 +12,7 @@ fi
 
 echo Starting
 
-# Enter the env
-source pyEnv/bin/activate
-uvicorn vsoHealthReportAPI:healthReportApp --host `hostname -f` --port 26996 --workers 1 &> /dev/null &
+uv run uvicorn vsoHealthReportAPI:healthReportApp --host `hostname -f` --port 26996 --workers 1 &> /dev/null &
 
 exit 0
 

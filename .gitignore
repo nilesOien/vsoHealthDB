@@ -4,3 +4,5 @@ csvFiles
 .env
 __pycache__
 cronRunner.log
+pyproject.toml
+uv.lock
