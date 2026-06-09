@@ -1,7 +1,7 @@
 #!/bin/bash
 
 source pyEnv/bin/activate
-export PYTHONPATH="`pwd`"
+export PYTHONPATH="$HOME/vsoHealthDB"
 pytest -v
 
 exit 0
