@@ -1,6 +1,6 @@
 #!/bin/bash
 
-num=`ps aux | grep uvicorn | grep -v grep | wc -l`
+num=`ps aux | grep uvicorn | grep -v "uv run" | grep -v grep | wc -l`
 
 if [ "$num" -eq 0 ]
 then
@@ -8,7 +8,7 @@ then
  exit 0
 fi
 
-pid=`ps aux | grep $USER | grep uvicorn | grep -v grep | awk '{print $2}'`
+pid=`ps aux | grep $USER | grep uvicorn | grep -v "uv run" | grep -v grep | awk '{print $2}'`
 echo $pid
 kill -11 "$pid"
 
