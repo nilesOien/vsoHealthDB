@@ -223,8 +223,8 @@ async def get_health_report_data(request: HealthReportDataRequest):
     """
     Returns a JSON structure with VSO health report information from a database.
     Times are in YYYYMMDD_HHMMSS format. Provider, source and instrument CSVs are comma
-    separated lists of Strings. Provider and source are are converted to upper case internally,
-    with white spaces stripped out. Instruments are left as-is.
+    separated lists of Strings. Provider is converted to upper case internally,
+    with white spaces stripped out. Instruments and sources are left as-is.
     Status is a comma separated list of integer status codes with the following meanings :
     0 => Test passed,  1 => Test passed on known request,
     2 => Test skipped, 8 => Test failed on data download, 9 => Test failed with no response.
@@ -271,8 +271,7 @@ async def get_health_report_data(request: HealthReportDataRequest):
         query=query.filter(or_(*prov_filters))
 
     if sourceCSV is not None :
-        sCSV = "".join(sourceCSV.split())
-        src_list = sCSV.upper().split(',')
+        src_list = sourceCSV.split(',')
         src_filters = [reportTable.Source == src for src in src_list]
         query=query.filter(or_(*src_filters))
 

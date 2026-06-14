@@ -2,6 +2,14 @@
 
 cd $HOME/vsoHealthDB
 
+
+if ! [[ "$PATH" =~ "$HOME/.local/bin:$HOME/bin:" ]]
+then
+    PATH="$HOME/.local/bin:$HOME/bin:$PATH"
+fi
+export PATH
+
+
 num=`ps aux | grep "$USER" | grep uvicorn | grep -v grep | wc -l`
 
 if [ "$num" -ne 0 ]
